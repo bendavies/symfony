@@ -4,6 +4,9 @@ on:
     push:
     pull_request:
 
+env:
+    REQUIRED_PHP_EXTENSIONS: "json,couchbase,memcached,mongodb,redis,rdkafka,xsl"
+
 jobs:
 
     integration:
@@ -95,13 +98,28 @@ jobs:
                     curl -s -u Administrator:111111 -X POST http://localhost:8091/pools/default/buckets -d 'ramQuotaMB=100&bucketType=ephemeral&name=cache'
                     curl -s -u Administrator:111111 -X POST  http://localhost:8091/pools/default -d 'memoryQuota=256'
 
+            - name: Setup Cache PHP Extensions
+              id: php-extension-cache
+              uses: shivammathur/cache-extensions@v1
+              with:
+                  php-version: ${{ matrix.php }}
+                  extensions: ${{ env.REQUIRED_PHP_EXTENSIONS }}
+                  key: ${{ matrix.php }}-php-extension-cache
+
+            - name: Cache PHP Extensions
+              uses: actions/cache@v1
+              with:
+                  path: ${{ steps.php-extension-cache.outputs.dir }}
+                  key: ${{ steps.php-extension-cache.outputs.key }}
+                  restore-keys: ${{ steps.php-extension-cache.outputs.key }}
+
             -   name: Setup PHP
                 uses: shivammathur/setup-php@v2
                 with:
-                    coverage: "none"
-                    extensions: "json,couchbase,memcached,mongodb,redis,rdkafka,xsl"
-                    ini-values: "memory_limit=-1"
-                    php-version: "${{ matrix.php }}"
+                    coverage: none
+                    extensions: ${{ env.REQUIRED_PHP_EXTENSIONS }}
+                    ini-values: memory_limit=-1
+                    php-version: ${{ matrix.php }}
                     tools: flex,pecl
 
             -   name: Configure composer
